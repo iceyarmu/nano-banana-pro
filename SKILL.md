@@ -1,6 +1,6 @@
 ---
 name: nano-banana-pro
-description: Generate/edit images with Nano Banana Pro (Gemini Flash Image). Use for image create/modify requests incl. edits. Supports text-to-image + image-to-image (single or multiple reference images); 1K/2K/4K; use --input-image.
+description: Generate/edit images with Nano Banana Pro (Gemini Flash Image). Use for image create/modify requests incl. edits. Supports text-to-image + image-to-image (single or multiple reference images); 1K/2K/4K; aspect ratios 1:1/16:9/9:16/4:3/3:4; use --input-image.
 ---
 
 # Nano Banana Pro Image Generation & Editing
@@ -13,17 +13,17 @@ Run the script using absolute path (do NOT cd to skill directory first):
 
 **Generate new image:**
 ```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "your image description" --filename "output-name.png" [--resolution 1K|2K|4K]
+uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "your image description" --filename "output-name.png" [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
 ```
 
 **Edit existing image (single reference):**
 ```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "editing instructions" --filename "output-name.png" --input-image "path/to/input.png" [--resolution 1K|2K|4K]
+uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "editing instructions" --filename "output-name.png" --input-image "path/to/input.png" [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
 ```
 
 **Edit with multiple reference images:**
 ```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "combine these styles" --filename "output-name.png" --input-image "ref1.png" "ref2.png" "ref3.png" [--resolution 1K|2K|4K]
+uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "combine these styles" --filename "output-name.png" --input-image "ref1.png" "ref2.png" "ref3.png" [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
 ```
 
 **Important:** Always run from the user's current working directory so images are saved where the user is working, not in the skill directory.
@@ -33,11 +33,11 @@ uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --
 Goal: fast iteration without burning time on 4K until the prompt is correct.
 
 - Draft (1K): quick feedback loop
-  - `uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "<draft prompt>" --filename "yyyy-mm-dd-hh-mm-ss-draft.png" --resolution 1K`
+  - `uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "<draft prompt>" --filename "yyyy-mm-dd-hh-mm-ss-draft.png" --resolution 1K [--aspect-ratio 16:9]`
 - Iterate: adjust prompt in small diffs; keep filename new per run
   - If editing: keep the same `--input-image` for every iteration until you're happy.
 - Final (4K): only when prompt is locked
-  - `uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "<final prompt>" --filename "yyyy-mm-dd-hh-mm-ss-final.png" --resolution 4K`
+  - `uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "<final prompt>" --filename "yyyy-mm-dd-hh-mm-ss-final.png" --resolution 4K [--aspect-ratio 16:9]`
 
 ## Resolution Options
 
@@ -52,6 +52,24 @@ Map user requests to API parameters:
 - "low resolution", "1080", "1080p", "1K" → `1K`
 - "2K", "2048", "normal", "medium resolution" → `2K`
 - "high resolution", "high-res", "hi-res", "4K", "ultra" → `4K`
+
+## Aspect Ratio Options
+
+Supported aspect ratios (default: `16:9`):
+
+- **1:1** - Square
+- **16:9** - Widescreen landscape (default)
+- **9:16** - Vertical/portrait (stories, reels)
+- **4:3** - Classic landscape
+- **3:4** - Classic portrait
+
+Map user requests to API parameters:
+- No mention of aspect ratio, Default → `16:9`
+- "square", "1:1" → `1:1`
+- "widescreen", "landscape", "16:9", "banner", "desktop wallpaper" → `16:9`
+- "vertical", "portrait", "story", "reel", "9:16", "phone wallpaper" → `9:16`
+- "4:3", "classic", "standard" → `4:3`
+- "3:4", "classic portrait" → `3:4`
 
 ## Model
 
@@ -125,12 +143,17 @@ Use templates when the user is vague or when edits must be precise.
 
 **Generate new image:**
 ```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "A serene Japanese garden with cherry blossoms" --filename "2025-11-23-14-23-05-japanese-garden.png" --resolution 4K
+uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "A serene Japanese garden with cherry blossoms" --filename "2025-11-23-14-23-05-japanese-garden.png" --resolution 4K --aspect-ratio 16:9
+```
+
+**Generate vertical image (e.g., phone wallpaper):**
+```bash
+uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "A tall waterfall in a misty forest" --filename "2025-11-23-14-24-00-waterfall.png" --resolution 4K --aspect-ratio 9:16
 ```
 
 **Edit existing image:**
 ```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "make the sky more dramatic with storm clouds" --filename "2025-11-23-14-25-30-dramatic-sky.png" --input-image "original-photo.jpg" --resolution 4K
+uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "make the sky more dramatic with storm clouds" --filename "2025-11-23-14-25-30-dramatic-sky.png" --input-image "original-photo.jpg" --resolution 4K --aspect-ratio 16:9
 ```
 
 **Multiple reference images:**

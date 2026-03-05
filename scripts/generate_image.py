@@ -10,7 +10,7 @@
 Generate images using Google's Nano Banana Pro (Gemini 3 Pro Image) API.
 
 Usage:
-    uv run generate_image.py --prompt "your image description" --filename "output.png" [--input-image img1.png img2.png ...] [--resolution 1K|2K|4K] [--api-key KEY]
+    uv run generate_image.py --prompt "your image description" --filename "output.png" [--input-image img1.png img2.png ...] [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4] [--api-key KEY]
 """
 
 import argparse
@@ -57,6 +57,12 @@ def main():
         choices=["1K", "2K", "4K"],
         default="1K",
         help="Output resolution: 1K (default), 2K, or 4K"
+    )
+    parser.add_argument(
+        "--aspect-ratio", "-a",
+        choices=["1:1", "16:9", "9:16", "4:3", "3:4"],
+        default="16:9",
+        help="Output aspect ratio: 1:1, 16:9 (default), 9:16, 4:3, 3:4"
     )
     parser.add_argument(
         "--api-key", "-k",
@@ -124,12 +130,14 @@ def main():
             print(f"Auto-detected resolution: {output_resolution} (from max input dim {max_dim})")
 
     # Build contents (images first if editing, prompt only if generating)
+    aspect_ratio = args.aspect_ratio
+
     if input_images:
         contents = [*input_images, args.prompt]
-        print(f"Editing with {len(input_images)} reference image(s), resolution {output_resolution}...")
+        print(f"Editing with {len(input_images)} reference image(s), resolution {output_resolution}, aspect ratio {aspect_ratio}...")
     else:
         contents = args.prompt
-        print(f"Generating image with resolution {output_resolution}...")
+        print(f"Generating image with resolution {output_resolution}, aspect ratio {aspect_ratio}...")
 
     try:
         response = client.models.generate_content(
@@ -138,7 +146,8 @@ def main():
             config=types.GenerateContentConfig(
                 response_modalities=["TEXT", "IMAGE"],
                 image_config=types.ImageConfig(
-                    image_size=output_resolution
+                    image_size=output_resolution,
+                    aspect_ratio=aspect_ratio
                 )
             )
         )

@@ -18,7 +18,6 @@ import argparse
 import base64
 import mimetypes
 import os
-import struct
 import sys
 from pathlib import Path
 
@@ -54,36 +53,6 @@ def image_to_part(img_path: str) -> dict:
     return {"inlineData": {"mimeType": mime_type, "data": data}}
 
 
-def get_image_max_dim(img_path: str) -> int:
-    """Get max dimension of an image from file header (PNG/JPEG only)."""
-    try:
-        with open(img_path, "rb") as f:
-            header = f.read(32)
-            # PNG
-            if header[:8] == b"\x89PNG\r\n\x1a\n":
-                w, h = struct.unpack(">II", header[16:24])
-                return max(w, h)
-            # JPEG
-            if header[:2] == b"\xff\xd8":
-                f.seek(2)
-                while True:
-                    marker = f.read(2)
-                    if len(marker) < 2:
-                        break
-                    size_bytes = f.read(2)
-                    if len(size_bytes) < 2:
-                        break
-                    size = struct.unpack(">H", size_bytes)[0]
-                    m = struct.unpack(">H", marker)[0]
-                    if 0xFFC0 <= m <= 0xFFC3:
-                        f.read(1)
-                        h, w = struct.unpack(">HH", f.read(4))
-                        return max(w, h)
-                    f.read(size - 2)
-    except Exception:
-        pass
-    return 0
-
 
 def main():
     parser = argparse.ArgumentParser(description="Generate images via Gemini Flash Image API")
@@ -111,27 +80,15 @@ def main():
 
     # Build request parts
     parts = []
-    output_resolution = args.resolution
 
     if args.input_image:
-        max_dim = 0
         for img_path in args.input_image:
             parts.append(image_to_part(img_path))
-            dim = get_image_max_dim(img_path)
-            max_dim = max(max_dim, dim)
             print(f"Loaded input image: {img_path}")
-
-        # Auto-detect resolution from input dimensions
-        if args.resolution == "1K" and max_dim > 0:
-            if max_dim >= 3000:
-                output_resolution = "4K"
-            elif max_dim >= 1500:
-                output_resolution = "2K"
-            print(f"Auto-detected resolution: {output_resolution} (max input dim {max_dim})")
 
     parts.append({"text": args.prompt})
 
-    model_name = build_model_name(args.aspect_ratio, output_resolution)
+    model_name = build_model_name(args.aspect_ratio, args.resolution)
     print(f"Using model: {model_name}")
 
     url = f"{base_url}/v1beta/models/{model_name}:generateContent"

@@ -1,162 +1,83 @@
 ---
 name: nano-banana-pro
-description: Generate/edit images with Nano Banana Pro (Gemini Flash Image). Use for image create/modify requests incl. edits. Supports text-to-image + image-to-image (single or multiple reference images); 1K/2K/4K; aspect ratios 1:1/16:9/9:16/4:3/3:4; use --input-image.
+description: Generate/edit images via Gemini Flash Image API. Supports text-to-image and image editing (single/multi reference). Aspect ratio and resolution controlled via model name.
 ---
 
-# Nano Banana Pro Image Generation & Editing
+# Nano Banana Pro
 
-Generate new images or edit existing ones using the Gemini Flash Image API (via GEMINI_BASE_URL proxy).
+Generate or edit images via Gemini Flash Image API (`GEMINI_BASE_URL` proxy).
 
-## Usage
+## Command
 
-Run the script using absolute path (do NOT cd to skill directory first):
-
-**Generate new image:**
 ```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "your image description" --filename "output-name.png" [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
+uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py \
+  --prompt "description" --filename "output.png" \
+  [--input-image img1.png ...] \
+  [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
 ```
 
-**Edit existing image (single reference):**
-```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "editing instructions" --filename "output-name.png" --input-image "path/to/input.png" [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
-```
+Always run from user's working directory, do NOT cd to skill directory.
 
-**Edit with multiple reference images:**
-```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "combine these styles" --filename "output-name.png" --input-image "ref1.png" "ref2.png" "ref3.png" [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
-```
+## Model Naming Convention
 
-**Important:** Always run from the user's current working directory so images are saved where the user is working, not in the skill directory.
+Aspect ratio and resolution are controlled via model name, not config params.
 
-## Default Workflow (draft → iterate → final)
+**Format:** `gemini-3.1-flash-image-{ratio}[-{resolution}]`
 
-Goal: fast iteration without burning time on 4K until the prompt is correct.
+| Aspect Ratio | Model Suffix |
+|---|---|
+| 16:9 横屏 | `landscape` |
+| 9:16 竖屏 | `portrait` |
+| 1:1 方图 | `square` |
+| 4:3 横屏 | `four-three` |
+| 3:4 竖屏 | `three-four` |
 
-- Draft (1K): quick feedback loop
-  - `uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "<draft prompt>" --filename "yyyy-mm-dd-hh-mm-ss-draft.png" --resolution 1K [--aspect-ratio 16:9]`
-- Iterate: adjust prompt in small diffs; keep filename new per run
-  - If editing: keep the same `--input-image` for every iteration until you're happy.
-- Final (4K): only when prompt is locked
-  - `uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "<final prompt>" --filename "yyyy-mm-dd-hh-mm-ss-final.png" --resolution 4K [--aspect-ratio 16:9]`
+| Resolution | Model Suffix |
+|---|---|
+| 1K (~1024px) | *(无后缀)* |
+| 2K (~2048px) | `-2k` |
+| 4K (~4096px) | `-4k` |
 
-## Resolution Options
+**示例:**
+- `gemini-3.1-flash-image-landscape` → 16:9, 1K
+- `gemini-3.1-flash-image-square-2k` → 1:1, 2K
+- `gemini-3.1-flash-image-portrait-4k` → 9:16, 4K
+- `gemini-3.1-flash-image-four-three-4k` → 4:3, 4K
 
-The API supports three resolutions (uppercase K required):
+脚本会根据 `--aspect-ratio` 和 `--resolution` 自动拼接模型名。
 
-- **1K** (default) - ~1024px resolution
-- **2K** - ~2048px resolution
-- **4K** - ~4096px resolution
+## Defaults
 
-Map user requests to API parameters:
-- No mention of resolution, Default → `4K`
-- "low resolution", "1080", "1080p", "1K" → `1K`
-- "2K", "2048", "normal", "medium resolution" → `2K`
-- "high resolution", "high-res", "hi-res", "4K", "ultra" → `4K`
+- **Resolution:** 4K（用户未指定时）
+- **Aspect Ratio:** 16:9 landscape（用户未指定时）
+- **Editing:** 自动根据输入图片尺寸推断分辨率
 
-## Aspect Ratio Options
+## Filename
 
-Supported aspect ratios (default: `16:9`):
+Pattern: `yyyy-mm-dd-hh-mm-ss-descriptive-name.png`
 
-- **1:1** - Square
-- **16:9** - Widescreen landscape (default)
-- **9:16** - Vertical/portrait (stories, reels)
-- **4:3** - Classic landscape
-- **3:4** - Classic portrait
+从 prompt 提取简短描述（1-5 词，小写，连字符），不确定时用随机 ID（如 `x9k2`）。
 
-Map user requests to API parameters:
-- No mention of aspect ratio, Default → `16:9`
-- "square", "1:1" → `1:1`
-- "widescreen", "landscape", "16:9", "banner", "desktop wallpaper" → `16:9`
-- "vertical", "portrait", "story", "reel", "9:16", "phone wallpaper" → `9:16`
-- "4:3", "classic", "standard" → `4:3`
-- "3:4", "classic portrait" → `3:4`
+## Prompt Rules
 
-## Model
+- 始终用英文写 prompt
+- 中文仅用于图中文字内容（对话气泡、标题等），用单引号包裹：`with text saying '你好'`
+- 生成：直接传用户描述，仅在明显不足时润色
+- 编辑：传编辑指令（如 "add rainbow to sky"）
 
-Default model: `gemini-3.1-flash-image`
+精确编辑模板：
+> "Change ONLY: \<change\>. Keep identical: subject, composition, pose, lighting, color palette, background, text, and style."
 
-The script uses `GEMINI_BASE_URL` environment variable to route requests through a proxy. No API key required when using the proxy.
+## Editing
 
-## Preflight + Common Failures (fast fixes)
+用 `--input-image` 传入一个或多个图片路径，prompt 写编辑指令。
 
-- Preflight:
-  - `command -v uv` (must exist)
-  - If editing: verify all `--input-image` paths exist (`test -f` each)
+## Preflight
 
-- Common failures:
-  - `Error loading input image:` → wrong path / unreadable file; verify `--input-image` points to a real image
-  - "502 Bad Gateway" → proxy service may be down; check `GEMINI_BASE_URL` is reachable
-
-## Filename Generation
-
-Generate filenames with the pattern: `yyyy-mm-dd-hh-mm-ss-name.png`
-
-**Format:** `{timestamp}-{descriptive-name}.png`
-- Timestamp: Current date/time in format `yyyy-mm-dd-hh-mm-ss` (24-hour format)
-- Name: Descriptive lowercase text with hyphens
-- Keep the descriptive part concise (1-5 words typically)
-- Use context from user's prompt or conversation
-- If unclear, use random identifier (e.g., `x9k2`, `a7b3`)
-
-Examples:
-- Prompt "A serene Japanese garden" → `2025-11-23-14-23-05-japanese-garden.png`
-- Prompt "sunset over mountains" → `2025-11-23-15-30-12-sunset-mountains.png`
-- Prompt "create an image of a robot" → `2025-11-23-16-45-33-robot.png`
-- Unclear context → `2025-11-23-17-12-48-x9k2.png`
-
-## Image Editing
-
-When the user wants to modify an existing image:
-1. Check if they provide image path(s) or reference image(s) in the current directory
-2. Use `--input-image` parameter with one or more image paths (e.g., `--input-image img1.png img2.png`)
-3. The prompt should contain editing instructions (e.g., "make the sky more dramatic", "remove the person", "change to cartoon style")
-4. Multiple reference images are useful for style transfer, combining elements, or providing context
-5. Common editing tasks: add/remove elements, change style, adjust colors, blur background, etc.
-
-## Prompt Handling
-
-**For generation:** Pass user's image description as-is to `--prompt`. Only rework if clearly insufficient.
-
-**For editing:** Pass editing instructions in `--prompt` (e.g., "add a rainbow in the sky", "make it look like a watercolor painting")
-
-Preserve user's creative intent in both cases.
-
-**Language rule:** Always write prompt descriptions in English (scene, style, composition, lighting, etc.). Chinese is only allowed for in-image text content such as dialogue bubbles, titles, labels, or captions that should appear literally in the generated image — and must be wrapped in single quotes (e.g., `with a speech bubble saying '你好世界'`).
-
-## Prompt Templates (high hit-rate)
-
-Use templates when the user is vague or when edits must be precise.
-
-- Generation template:
-  - "Create an image of: <subject>. Style: <style>. Composition: <camera/shot>. Lighting: <lighting>. Background: <background>. Color palette: <palette>. Avoid: <list>."
-
-- Editing template (preserve everything else):
-  - "Change ONLY: <single change>. Keep identical: subject, composition/crop, pose, lighting, color palette, background, text, and overall style. Do not add new objects. If text exists, keep it unchanged."
+- `command -v uv`（必须安装）
+- 编辑时：验证所有 `--input-image` 路径存在
 
 ## Output
 
-- Saves PNG to current directory (or specified path if filename includes directory)
-- Script outputs the full path to the generated image
-- **Do not read the image back** - just inform the user of the saved path
-
-## Examples
-
-**Generate new image:**
-```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "A serene Japanese garden with cherry blossoms" --filename "2025-11-23-14-23-05-japanese-garden.png" --resolution 4K --aspect-ratio 16:9
-```
-
-**Generate vertical image (e.g., phone wallpaper):**
-```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "A tall waterfall in a misty forest" --filename "2025-11-23-14-24-00-waterfall.png" --resolution 4K --aspect-ratio 9:16
-```
-
-**Edit existing image:**
-```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "make the sky more dramatic with storm clouds" --filename "2025-11-23-14-25-30-dramatic-sky.png" --input-image "original-photo.jpg" --resolution 4K --aspect-ratio 16:9
-```
-
-**Multiple reference images:**
-```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py --prompt "combine the composition of the first image with the color palette of the second" --filename "2025-11-23-14-30-00-combined-style.png" --input-image "composition-ref.png" "color-ref.png" --resolution 4K
-```
+- 保存 PNG 到当前目录
+- 不要回读图片，将图片发送到飞书即可

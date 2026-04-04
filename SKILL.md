@@ -10,7 +10,7 @@ Generate or edit images via Gemini Flash Image API (`GEMINI_BASE_URL` proxy).
 ## Command
 
 ```bash
-uv run ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py \
+python3 ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py \
   --prompt "description" --filename "output.png" \
   [--input-image img1.png ...] \
   [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
@@ -50,7 +50,6 @@ Aspect ratio and resolution are controlled via model name, not config params.
 
 - **Resolution:** 4K（用户未指定时）
 - **Aspect Ratio:** 16:9 landscape（用户未指定时）
-- **Editing:** 自动根据输入图片尺寸推断分辨率
 
 ## Filename
 
@@ -74,7 +73,8 @@ Pattern: `yyyy-mm-dd-hh-mm-ss-descriptive-name.png`
 
 ## Preflight
 
-- `command -v uv`（必须安装）
+- `command -v python3`（必须安装）
+- `python3 -c "import httpx"`（httpx 必须已安装）
 - 编辑时：验证所有 `--input-image` 路径存在
 
 ## Output

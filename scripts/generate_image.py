@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
-# /// script
-# requires-python = ">=3.10"
-# dependencies = [
-#     "httpx>=0.27.0",
-# ]
-# ///
 """
 Generate images using Gemini Flash Image API via direct HTTP requests.
 
+Requires: httpx (pip install httpx)
+
 Usage:
-    uv run generate_image.py --prompt "description" --filename "output.png" \
+    python3 generate_image.py --prompt "description" --filename "output.png" \
         [--input-image img1.png ...] [--resolution 1K|2K|4K] \
         [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
 """

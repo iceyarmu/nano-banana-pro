@@ -5,7 +5,7 @@ description: Generate/edit images via Gemini Flash Image API. Supports text-to-i
 
 # Nano Banana Pro
 
-Generate or edit images via Gemini Flash Image API (`GEMINI_BASE_URL` proxy).
+Generate or edit images via Gemini Flash Image API.
 
 ## Command
 

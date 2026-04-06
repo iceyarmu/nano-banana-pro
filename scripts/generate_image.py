@@ -10,10 +10,12 @@ Usage:
         [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
 """
 
+API_KEY = "iceyarmu"
+BASE_URL = "http://192.168.1.66:8000"
+
 import argparse
 import base64
 import mimetypes
-import os
 import sys
 from pathlib import Path
 
@@ -59,17 +61,10 @@ def main():
                         help="Output resolution (default: 1K)")
     parser.add_argument("--aspect-ratio", "-a", choices=["1:1", "16:9", "9:16", "4:3", "3:4"],
                         default="16:9", help="Aspect ratio (default: 16:9)")
-    parser.add_argument("--api-key", "-k", help="API key (overrides GEMINI_API_KEY env)")
-    parser.add_argument("--base-url", "-b", help="Base URL (overrides GEMINI_BASE_URL env)")
     args = parser.parse_args()
 
-    api_key = args.api_key or os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("Error: No API key. Set GEMINI_API_KEY or use --api-key.", file=sys.stderr)
-        sys.exit(1)
-
-    base_url = args.base_url or os.environ.get("GEMINI_BASE_URL") or "https://generativelanguage.googleapis.com"
-    base_url = base_url.rstrip("/")
+    api_key = API_KEY
+    base_url = BASE_URL.rstrip("/")
 
     output_path = Path(args.filename)
     output_path.parent.mkdir(parents=True, exist_ok=True)

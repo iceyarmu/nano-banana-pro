@@ -1,11 +1,11 @@
 ---
 name: nano-banana-pro
-description: Generate/edit images via Gemini Flash Image API. Supports text-to-image and image editing (single/multi reference). Aspect ratio and resolution controlled via model name.
+description: Generate or edit images via Gemini Flash Image. Supports text-to-image and image editing (single or multi reference) with aspect ratio and resolution control.
 ---
 
 # Nano Banana Pro
 
-Generate or edit images via Gemini Flash Image API.
+Generate or edit images via Gemini Flash Image.
 
 ## Command
 
@@ -18,38 +18,17 @@ python3 ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py \
 
 Always run from user's working directory, do NOT cd to skill directory.
 
-## Model Naming Convention
+## Parameters
 
-Aspect ratio and resolution are controlled via model name, not config params.
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `--prompt` / `-p` | Yes | - | Image description or edit instruction |
+| `--filename` / `-f` | Yes | - | Output file path (.png) |
+| `--input-image` / `-i` | No | - | Input image path(s) for editing; pass one or more |
+| `--resolution` / `-r` | No | `1K` | `1K`, `2K`, or `4K` |
+| `--aspect-ratio` / `-a` | No | `16:9` | `1:1`, `16:9`, `9:16`, `4:3`, or `3:4` |
 
-**Format:** `gemini-3.1-flash-image-{ratio}[-{resolution}]`
-
-| Aspect Ratio | Model Suffix |
-|---|---|
-| 16:9 横屏 | `landscape` |
-| 9:16 竖屏 | `portrait` |
-| 1:1 方图 | `square` |
-| 4:3 横屏 | `four-three` |
-| 3:4 竖屏 | `three-four` |
-
-| Resolution | Model Suffix |
-|---|---|
-| 1K (~1024px) | *(无后缀)* |
-| 2K (~2048px) | `-2k` |
-| 4K (~4096px) | `-4k` |
-
-**示例:**
-- `gemini-3.1-flash-image-landscape` → 16:9, 1K
-- `gemini-3.1-flash-image-square-2k` → 1:1, 2K
-- `gemini-3.1-flash-image-portrait-4k` → 9:16, 4K
-- `gemini-3.1-flash-image-four-three-4k` → 4:3, 4K
-
-脚本会根据 `--aspect-ratio` 和 `--resolution` 自动拼接模型名。
-
-## Defaults
-
-- **Resolution:** 4K（用户未指定时）
-- **Aspect Ratio:** 16:9 landscape（用户未指定时）
+Recommended defaults when the user does not specify: `--resolution 2K`, `--aspect-ratio 16:9`.
 
 ## Filename
 
@@ -60,7 +39,7 @@ Pattern: `yyyy-mm-dd-hh-mm-ss-descriptive-name.png`
 ## Prompt Rules
 
 - 始终用英文写 prompt
-- 中文仅用于图中文字内容（对话气泡、标题等），用单引号包裹：`with text saying '你好'`
+- 图中文字内容（对话气泡、标题等）可以用中文，用单引号包裹：`with text saying '你好'`
 - 生成：直接传用户描述，仅在明显不足时润色
 - 编辑：传编辑指令（如 "add rainbow to sky"）
 

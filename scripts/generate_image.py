@@ -10,14 +10,15 @@ Usage:
         [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]
 """
 
-API_KEY = "iceyarmu"
-BASE_URL = "http://192.168.1.66:8000"
-
 import argparse
 import base64
 import mimetypes
+import os
 import sys
 from pathlib import Path
+
+API_KEY = os.environ.get("GEMINI_API_KEY") or "iceyarmu"
+BASE_URL = os.environ.get("GEMINI_BASE_URL") or "http://192.168.1.66:8000"
 
 RATIO_TO_MODEL = {
     "16:9": "landscape",

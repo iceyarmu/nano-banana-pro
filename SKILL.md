@@ -18,6 +18,10 @@ python3 ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py \
 
 Always run from user's working directory, do NOT cd to skill directory.
 
+## Concurrency
+
+最大支持 **10 个并发**图片生成进程。当需要批量生成多张图片时，可同时调用最多 10 个 `generate_image.py` 进程并行执行，以提高效率。超过 10 个并发可能导致请求失败或被限流。
+
 ## Parameters
 
 | Parameter | Required | Default | Description |

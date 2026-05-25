@@ -10,7 +10,7 @@ Generate or edit images via Gemini Flash Image.
 ## Command
 
 ```bash
-python3 ~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py \
+python3 ~/.hermes/skills/nano-banana-pro/scripts/generate_image.py \
   --prompt "description" --filename "output.png" \
   [--input-image img1.png ...] \
   [--resolution 1K|2K|4K] [--aspect-ratio 1:1|16:9|9:16|4:3|3:4]

@@ -17,8 +17,8 @@ import os
 import sys
 from pathlib import Path
 
-API_KEY = os.environ.get("GEMINI_API_KEY") or "iceyarmu"
-BASE_URL = os.environ.get("GEMINI_BASE_URL") or "http://192.168.1.66:8000"
+API_KEY = os.environ.get("IMAGE_API_KEY") or "iceyarmu"
+BASE_URL = os.environ.get("IMAGE_API_BASE") or "http://127.0.0.1:8000"
 
 RATIO_TO_MODEL = {
     "16:9": "landscape",

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-Generate images using Gemini Flash Image API via direct HTTP requests.
+Generate images via the async image generation API.
+
+Submits a task and polls until completion, then downloads the resulting image.
 
 Requires: httpx (pip install httpx)
 
@@ -15,46 +17,30 @@ import base64
 import mimetypes
 import os
 import sys
+import time
 from pathlib import Path
 
 API_KEY = os.environ.get("IMAGE_API_KEY") or "iceyarmu"
 BASE_URL = os.environ.get("IMAGE_API_BASE") or "http://127.0.0.1:8000"
+MODEL = "nana-banana-2"
 
-RATIO_TO_MODEL = {
-    "16:9": "landscape",
-    "9:16": "portrait",
-    "1:1": "square",
-    "4:3": "four-three",
-    "3:4": "three-four",
-}
-
-RESOLUTION_TO_SUFFIX = {
-    "1K": "",
-    "2K": "-2k",
-    "4K": "-4k",
-}
+POLL_INTERVAL_SECONDS = 3
+POLL_TIMEOUT_SECONDS = 600
 
 
-def build_model_name(aspect_ratio: str, resolution: str) -> str:
-    ratio_part = RATIO_TO_MODEL[aspect_ratio]
-    res_suffix = RESOLUTION_TO_SUFFIX[resolution]
-    return f"gemini-3.1-flash-image-{ratio_part}{res_suffix}"
-
-
-def image_to_part(img_path: str) -> dict:
-    """Read image file and return as inlineData part for Gemini API."""
+def image_to_data_url(img_path: str) -> str:
+    """Read image file and return as a data: URL."""
     path = Path(img_path)
     if not path.exists():
         print(f"Error: Image not found: {img_path}", file=sys.stderr)
         sys.exit(1)
     mime_type = mimetypes.guess_type(str(path))[0] or "image/png"
     data = base64.b64encode(path.read_bytes()).decode()
-    return {"inlineData": {"mimeType": mime_type, "data": data}}
-
+    return f"data:{mime_type};base64,{data}"
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate images via Gemini Flash Image API")
+    parser = argparse.ArgumentParser(description="Generate images via async image generation API")
     parser.add_argument("--prompt", "-p", required=True, help="Image description/prompt")
     parser.add_argument("--filename", "-f", required=True, help="Output filename")
     parser.add_argument("--input-image", "-i", nargs="+", help="Input image path(s) for editing")
@@ -70,41 +56,35 @@ def main():
     output_path = Path(args.filename)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Build request parts
-    parts = []
+    payload = {
+        "model": MODEL,
+        "prompt": args.prompt,
+        "aspect_ratio": args.aspect_ratio,
+        "resolution": args.resolution,
+    }
 
     if args.input_image:
+        images = []
         for img_path in args.input_image:
-            parts.append(image_to_part(img_path))
+            images.append(image_to_data_url(img_path))
             print(f"Loaded input image: {img_path}")
-
-    parts.append({"text": args.prompt})
-
-    model_name = build_model_name(args.aspect_ratio, args.resolution)
-    print(f"Using model: {model_name}")
-
-    url = f"{base_url}/v1beta/models/{model_name}:generateContent"
-
-    payload = {
-        "contents": [{"parts": parts}],
-        "generationConfig": {
-            "responseModalities": ["TEXT", "IMAGE"],
-        },
-    }
+        payload["images"] = images
 
     headers = {
         "Content-Type": "application/json",
-        "x-goog-api-key": api_key,
+        "Authorization": f"Bearer {api_key}",
     }
+
+    submit_url = f"{base_url}/v1/videos"
 
     import httpx
 
     try:
         with httpx.Client(timeout=300) as client:
-            print(f"Requesting {url} ...")
-            resp = client.post(url, json=payload, headers=headers)
+            print(f"Submitting task to {submit_url} ...")
+            resp = client.post(submit_url, json=payload, headers=headers)
             resp.raise_for_status()
-            result = resp.json()
+            task = resp.json()
     except httpx.HTTPStatusError as e:
         print(f"API error {e.response.status_code}: {e.response.text}", file=sys.stderr)
         sys.exit(1)
@@ -112,42 +92,65 @@ def main():
         print(f"Request error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Process response
-    candidates = result.get("candidates", [])
-    if not candidates:
-        print(f"Error: No candidates in response. Full response:\n{result}", file=sys.stderr)
+    task_id = task.get("task_id") or task.get("id")
+    if not task_id:
+        print(f"Error: No task_id in response: {task}", file=sys.stderr)
         sys.exit(1)
 
-    resp_parts = candidates[0].get("content", {}).get("parts", [])
-    image_saved = False
+    print(f"Task submitted: {task_id} (status: {task.get('status')})")
 
-    for part in resp_parts:
-        if "text" in part:
-            print(f"Model response: {part['text']}")
-        elif "inlineData" in part or "inline_data" in part:
-            # base64 image data
-            inline = part.get("inlineData") or part.get("inline_data")
-            image_data = base64.b64decode(inline["data"])
-            output_path.write_bytes(image_data)
-            image_saved = True
-        elif "fileData" in part or "file_data" in part:
-            # URL-based image response
-            file_info = part.get("fileData") or part.get("file_data")
-            file_uri = file_info.get("fileUri") or file_info.get("file_uri")
-            if file_uri:
-                print(f"Downloading image from: {file_uri}")
-                with httpx.Client(timeout=120) as dl_client:
-                    img_resp = dl_client.get(file_uri)
-                    img_resp.raise_for_status()
-                    output_path.write_bytes(img_resp.content)
-                image_saved = True
+    # Poll for completion
+    poll_url = f"{base_url}/v1/videos/{task_id}"
+    poll_headers = {"Authorization": f"Bearer {api_key}"}
+    deadline = time.monotonic() + POLL_TIMEOUT_SECONDS
+    last_progress = -1
 
-    if image_saved:
-        print(f"\nImage saved: {output_path.resolve()}")
-    else:
-        print("Error: No image in response.", file=sys.stderr)
-        print(f"Response parts: {resp_parts}", file=sys.stderr)
+    try:
+        with httpx.Client(timeout=60) as client:
+            while True:
+                if time.monotonic() > deadline:
+                    print(f"Error: Task timed out after {POLL_TIMEOUT_SECONDS}s", file=sys.stderr)
+                    sys.exit(1)
+                time.sleep(POLL_INTERVAL_SECONDS)
+                resp = client.get(poll_url, headers=poll_headers)
+                resp.raise_for_status()
+                task = resp.json()
+                status = task.get("status")
+                progress = task.get("progress", 0)
+                if progress != last_progress:
+                    print(f"Status: {status}, progress: {progress}%")
+                    last_progress = progress
+                if status == "completed":
+                    break
+                if status == "failed":
+                    err = task.get("error") or {}
+                    print(f"Error: Task failed: {err.get('message')} (code: {err.get('code')})", file=sys.stderr)
+                    sys.exit(1)
+    except httpx.HTTPStatusError as e:
+        print(f"Poll error {e.response.status_code}: {e.response.text}", file=sys.stderr)
         sys.exit(1)
+    except Exception as e:
+        print(f"Poll error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Extract image URL from completed task
+    result_urls = (task.get("metadata") or {}).get("result_urls") or []
+    image_url = task.get("image_url") or task.get("url") or (result_urls[0] if result_urls else None)
+    if not image_url:
+        print(f"Error: No image URL in completed task: {task}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Downloading image from: {image_url}")
+    try:
+        with httpx.Client(timeout=120) as client:
+            img_resp = client.get(image_url)
+            img_resp.raise_for_status()
+            output_path.write_bytes(img_resp.content)
+    except Exception as e:
+        print(f"Download error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"\nImage saved: {output_path.resolve()}")
 
 
 if __name__ == "__main__":

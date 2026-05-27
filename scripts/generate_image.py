@@ -140,15 +140,27 @@ def main():
         print(f"Error: No image URL in completed task: {task}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Downloading image from: {image_url}")
-    try:
-        with httpx.Client(timeout=120) as client:
-            img_resp = client.get(image_url)
-            img_resp.raise_for_status()
-            output_path.write_bytes(img_resp.content)
-    except Exception as e:
-        print(f"Download error: {e}", file=sys.stderr)
-        sys.exit(1)
+    if image_url.startswith("data:"):
+        try:
+            header, _, b64data = image_url.partition(",")
+            if ";base64" not in header:
+                print(f"Error: Unsupported data URL encoding: {header}", file=sys.stderr)
+                sys.exit(1)
+            print(f"Decoding inline data URL ({header})")
+            output_path.write_bytes(base64.b64decode(b64data))
+        except Exception as e:
+            print(f"Decode error: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print(f"Downloading image from: {image_url}")
+        try:
+            with httpx.Client(timeout=120) as client:
+                img_resp = client.get(image_url)
+                img_resp.raise_for_status()
+                output_path.write_bytes(img_resp.content)
+        except Exception as e:
+            print(f"Download error: {e}", file=sys.stderr)
+            sys.exit(1)
 
     print(f"\nImage saved: {output_path.resolve()}")
 

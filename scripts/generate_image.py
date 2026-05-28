@@ -22,7 +22,7 @@ from pathlib import Path
 
 API_KEY = os.environ.get("IMAGE_API_KEY") or "iceyarmu"
 BASE_URL = os.environ.get("IMAGE_API_BASE") or "http://127.0.0.1:8000"
-MODEL = "nana-banana-2"
+MODEL = os.environ.get("IMAGE_MODEL") or "nana-banana-2"
 
 POLL_INTERVAL_SECONDS = 3
 POLL_TIMEOUT_SECONDS = 600
